@@ -2,6 +2,7 @@ var querystring = require("querystring"),
 fs = require("fs"),
 formidable = require("formidable"),
 notesDAO = require("./notesDAO"),
+mongo = require("./mongo"),
 url = require('url');
 
 /*
@@ -36,7 +37,7 @@ function setmemo(response){
 Show a list of all notes of our database
 */
 function showallmemo(response){
-	notesDAO.listNotes(function(err, rows){
+	mongo.listNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><html><body>');
@@ -44,7 +45,7 @@ function showallmemo(response){
 		response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
 		for (var i = 0; i < rows.length; i++) {
 			response.write('<tr>');
-			response.write('<td>' + rows[i].id + '</td>');
+			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
 			response.write('<td>' + '<a href="./downloadfile?='+ rows[i].id  +'">' + rows[i].route_file + '</a>' + '</td>');
@@ -146,7 +147,8 @@ function savetask(response, request){
 				response.end();
 			}else{
 				var note = { date: fields['date'], text: fields['text'], route_file: route };
-				notesDAO.insertNote(note, function(err, rows){
+				mongo.insertNote(note, function(err, rows){
+					console.log(rows);
 					response.writeHead(200, {'content-type': 'text/html'});
 					response.write('<!DOCTYPE html><html><body>');
 					if(err){

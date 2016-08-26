@@ -2,8 +2,11 @@ var server = require("./server");
 var router = require("./router");
 var requestHandlers = require("./requestHandlers");
 var notesDAO = require("./notesDAO");
+var mongo = require("./mongo");
 
 notesDAO.connect();
+mongo.connect();
+
 
 var handle = {};
 handle["/"] = requestHandlers.setmemo;

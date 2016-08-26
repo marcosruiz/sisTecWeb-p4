@@ -13,7 +13,7 @@ function connect(){
       console.log('Error connecting to Db');
       return;
     }
-    console.log('Connection established');
+    console.log('Connection established with mySQL database');
   });
 }
 

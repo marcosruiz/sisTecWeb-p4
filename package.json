@@ -7,6 +7,7 @@
     "formidable": "^1.0.17",
     "fs": "0.0.1-security",
     "mongodb": "^2.2.8",
+    "mongodb-autoincrement": "^1.0.1",
     "mongoose": "^4.5.10",
     "querystring": "^0.2.0"
   },
