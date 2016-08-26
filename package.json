@@ -1,0 +1,38 @@
+{
+  "name": "sistecweb-p4",
+  "version": "1.0.0",
+  "description": "practica 4 de sistemas y tecnologias web",
+  "main": "index.js",
+  "dependencies": {
+    "formidable": "^1.0.17",
+    "fs": "0.0.1-security",
+    "mongodb": "^2.2.8",
+    "mongoose": "^4.5.10",
+    "querystring": "^0.2.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcosruiz/sisTecWeb-p4.git"
+  },
+  "keywords": [
+    "practica",
+    "4",
+    "sistemas",
+    "tecnologias",
+    "web",
+    "universidad",
+    "zaragoza",
+    "eina"
+  ],
+  "author": "marcos ruiz garcia",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marcosruiz/sisTecWeb-p4/issues"
+  },
+  "homepage": "https://github.com/marcosruiz/sisTecWeb-p4#readme"
+}

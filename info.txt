@@ -1,0 +1,3 @@
+To start mongodb:
+mongod --dbpath c:\data\notes_db
+Nota: notes_db es el directorio donde se va a descargar todo, es decir, es la base de datos
