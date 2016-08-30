@@ -1,21 +1,20 @@
 var server = require("./server");
 var router = require("./router");
 var requestHandlers = require("./requestHandlers");
-var notesDAO = require("./notesDAO");
-var mongo = require("./mongo");
+var mongo = require("./mongoConnector");
 
-notesDAO.connect();
 mongo.connect();
 
-
 var handle = {};
-handle["/"] = requestHandlers.setmemo;
+handle["/"] = requestHandlers.welcome;
 handle["/setmemo"] = requestHandlers.setmemo;
-handle["/savetask"] = requestHandlers.savetask;
+handle["/savememo"] = requestHandlers.savememo;
 handle["/showallmemo"] = requestHandlers.showallmemo;
 handle["/showmemo"] = requestHandlers.showmemo;
 handle["/deletememo"] = requestHandlers.deletememo;
 handle["/deleted"] = requestHandlers.deleted;
 handle["/downloadfile"] = requestHandlers.downloadfile;
+handle["/login"] = requestHandlers.login;
+handle["/welcome"] = requestHandlers.welcome;
 
 server.start(router.route, handle);

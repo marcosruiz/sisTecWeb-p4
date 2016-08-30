@@ -1,13 +1,120 @@
 var querystring = require("querystring"),
 fs = require("fs"),
 formidable = require("formidable"),
-notesDAO = require("./notesDAO"),
-mongo = require("./mongo"),
+mongoConnector = require("./mongoConnector"),
 url = require('url');
 
+
+function login(response, request){
+	console.log("Request handler 'login' was called.");
+
+	var form = new formidable.IncomingForm();
+	form.parse(request, function(error, fields) {
+		response.writeHead(200, {'content-type': 'text/html'});
+		response.write('<!DOCTYPE html><html><body>');
+		//Check data and insert into our database
+		if(fields['username'] == '' | fields['password'] == '' ){
+			response.write('Username and password are obligatoty fields.');
+		}else{
+			var user = { username: fields['username'], password: fields['password']};
+			mongoConnector.findUser(fields['username'], function(err, row){
+				if(err) throw err;
+				if(row == null){
+					//User doesnt exists, so we create a new user
+					mongoConnector.insertUser(user, function(err, row){
+						var form ='Welcome Mr. '+ fields['username'] + '<br/>' +
+							'<form action="/savememo" enctype="multipart/form-data" '+
+							'method="post">'+
+							'Date*: <input type="date" name="date"/><br/>' +
+							'Text*: <input type="text" name="text"/><br/>' +
+							'File: <input type="file" name="file" multiple="multiple"/><br/>'+
+							'<input type="hidden" name="username" value="'+ fields['username'] +'"/>' +
+							'<input type="hidden" name="password" value="'+ fields['password'] +'"/>' +
+							'<input type="submit" value="Save note" /></form><br/>';
+						response.write(form);
+						responseTableOfNotes(response, fields['username']);
+					});
+				} else{
+					//User exists
+					//Check password
+					if(fields['password'] == row['password']){
+						//Password is correct
+						var form ='Welcome Mr. '+ fields['username'] + '<br/>' +
+							'<form action="/savememo" enctype="multipart/form-data" '+
+							'method="post">'+
+							'Date*: <input type="date" name="date"/><br/>' +
+							'Text*: <input type="text" name="text"/><br/>' +
+							'File: <input type="file" name="file" multiple="multiple"/><br/>'+
+							'<input type="hidden" name="username" value="'+ fields['username'] +'"/>' +
+							'<input type="hidden" name="password" value="'+ fields['password'] +'"/>' +
+							'<input type="submit" value="Save note" /></form><br/>';
+						response.write(form);
+						responseTableOfNotes(response, fields['username']);
+					} else{
+						//Password is not correct
+						response.write('Password is not correct.');
+						response.write('</body></html>');
+						response.end();
+					}
+				}
+			});
+		}
+
+});
+
+}
+
+function responseTableOfNotes(response, username){
+	mongoConnector.listNotes(username, function(err, rows){
+		if(err) throw err;
+		response.write('<table>');
+		response.write('<tr><th>User</th><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th><th>Delete</th></tr>');
+		for (var i = 0; i < rows.length; i++) {
+			var form = '<div><form action="/deleted" enctype="multipart/form-data" '+
+				'method="post">'+
+				'<input type="hidden" name="id" value="'+ rows[i]._id +'">'+
+				'<input type="submit" value="Delete"></input>'+
+				'</form></div>';
+			response.write('<tr>');
+			response.write('<td>' + rows[i].username + '</td>');
+			response.write('<td>' + rows[i]._id + '</td>');
+			response.write('<td>' + rows[i].date + '</td>');
+			response.write('<td>' + rows[i].text + '</td>');
+			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
+			response.write('<td>' + form + '</td>');
+			response.write('</tr>');
+		};
+		response.write('</table>');
+		response.write('</body></html>');
+		response.end();
+	});
+}
+
+function welcome(response){
+	console.log("Request handler 'welcome' was called.");
+	var body = '<html>'+
+		'<head>'+
+		'<meta http-equiv="Content-Type" '+
+		'content="text/html; charset=UTF-8" />'+
+		'</head>'+
+		'<body>'+
+		'<form action="/login" enctype="multipart/form-data" '+
+		'method="post">'+
+		'Username: <input type="text" name="username"/><br/>' +
+		'Password: <input type="password" name="password"/><br/>' +
+		'<input type="submit" value="Login" />'+
+		'</form>'+
+		'</body>'+
+		'</html>';
+
+	response.writeHead(200, {"Content-Type": "text/html"});
+	response.write(body);
+	response.end();
+}
 /*
 It shows a form with an obligatotry date, an obligatory text, an optional
-file and a submit button witch calls to /savetask
+file and a submit button witch calls to /savememo
 */
 function setmemo(response){
 	console.log("Request handler 'setmemo' was called.");
@@ -18,12 +125,12 @@ function setmemo(response){
 		'content="text/html; charset=UTF-8" />'+
 		'</head>'+
 		'<body>'+
-		'<form action="/savetask" enctype="multipart/form-data" '+
+		'<form action="/savememo" enctype="multipart/form-data" '+
 		'method="post">'+
 		'Date*: <input type="date" name="date"/><br/>' +
 		'Text*: <input type="text" name="text"/><br/>' +
 		'File: <input type="file" name="file" multiple="multiple"/><br/>'+
-		'<input type="submit" value="Save task" />'+
+		'<input type="submit" value="Save note" />'+
 		'</form>'+
 		'</body>'+
 		'</html>';
@@ -37,7 +144,7 @@ function setmemo(response){
 Show a list of all notes of our database
 */
 function showallmemo(response){
-	mongo.listNotes(function(err, rows){
+	mongoConnector.listNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><html><body>');
@@ -48,8 +155,8 @@ function showallmemo(response){
 			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[i].id  +'">' + rows[i].route_file + '</a>' + '</td>');
-			response.write('<td>' + '<a href="./showmemo?='+ rows[i].id  +'">Details</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table>');
@@ -64,18 +171,19 @@ Show all info about a specific notes
 function showmemo(response, request){
 	var url_parts = url.parse(request.url, true);
 	var id = url_parts.query[""];
-	notesDAO.findNote(id, function(err, rows){
+	mongoConnector.findNote(id, function(err, rows){
 		if(err) throw err;
+		console.log(rows);
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><html><body>');
 		if(rows.length !== 0){
 			response.write('<table>');
 			response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>Download</th></tr>');
 			response.write('<tr>');
-			response.write('<td>' + rows[0].id + '</td>');
+			response.write('<td>' + rows[0]._id + '</td>');
 			response.write('<td>' + rows[0].date + '</td>');
 			response.write('<td>' + rows[0].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[0].id  +'">' + rows[0].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadfile?='+ rows[0]._id  +'">' + rows[0].route_file + '</a>' + '</td>');
 			response.write('</tr>');
 			response.write('</table>');
 		}else{
@@ -94,7 +202,7 @@ function downloadfile(response, request){
 	var url_parts = url.parse(request.url, true);
 	var id = url_parts.query[""];
 	if(typeof id !== 'undefined'){
-		notesDAO.findNote(id, function(err, rows){
+		mongoConnector.findNote(id, function(err, rows){
 			if(err) throw err;
 			if(rows.length !== 0){
 				response.writeHead(200, {});
@@ -115,52 +223,100 @@ function downloadfile(response, request){
 }
 
 /*
+Check user credentials
+*/
+function checkuser(response, request, err, callback){
+	//Check data and insert into our database
+	/*var form = new formidable.IncomingForm();
+	form.parse(request, function(error, fields, files){
+		if(fields['username'] == '' | fields['password'] == '' ){
+			var msg = "Username and password are obligatoty fields";
+			err(msg);
+		}else{
+			var user = { username: fields['username'], password: fields['password']};
+			mongoConnector.findUser(fields['username'], function(err, row){
+				if(err) throw err;
+				if(row == null){
+					//User doesnt exists
+					msg = "User doesnt exists";
+					err(msg);
+				} else{
+					//User exists
+					//Check password
+					if(fields['password'] == row['password']){
+						//Password is correct
+						callback(response, request);
+					} else{
+						//Password is not correct
+						var msg = "Password is not correct";
+						err(msg);
+					}
+				}
+			});
+		}
+	});*/
+	callback(response,request);
+}
+
+function err(msg){
+	response.writeHead(200, {"Content-Type": "text/plain"});
+	response.write(msg);
+	response.end();
+}
+
+/*
 Save a file in ./tmp/ and save a note in our database
 */
-function savetask(response, request){
-		console.log("Request handler 'savetask' was called.");
+function savememo(response, request){
+		console.log("Request handler 'savememo' was called.");
 
-		var form = new formidable.IncomingForm();
-		form.parse(request, function(error, fields, files) {
-			//If there are a file it will save it
-			var route = "";
-			if(typeof files.file !== 'undefined'){
-				if(files.file.name != ''){
-					route = "./tmp/" + files.file.name;
-					/* Possible error on Windows systems:
-					tried to rename to an already existing file */
-					fs.rename(files.file.path, route, function(error) {
-						if (error) {
-							fs.unlink(route);
-							fs.rename(files.file.path, route);
-						}
-					});
-				}
-			}
+		checkuser(response, request, err, checkNoteAndSave);
+}
 
-			//Check data and insert into our database
-			if(fields['date'] == '' | fields['text'] == '' ){
-				response.writeHead(200, {'content-type': 'text/html'});
-				response.write('<!DOCTYPE html><html><body>');
-				response.write('Date and Text are obligatoty.');
-				response.write('</body></html>');
-				response.end();
-			}else{
-				var note = { date: fields['date'], text: fields['text'], route_file: route };
-				mongo.insertNote(note, function(err, rows){
-					console.log(rows);
-					response.writeHead(200, {'content-type': 'text/html'});
-					response.write('<!DOCTYPE html><html><body>');
-					if(err){
-						response.write('There was a problem with our database connection.');
-					} else {
-						response.write('Note saved.');
+function checkNoteAndSave(response, request){
+	console.log("function 'checkNoteAndSave' was called. ");
+	var form = new formidable.IncomingForm();
+	form.parse(request, function(error, fields, files) {
+		//If there are a file it will save it
+		var route = "";
+		if(typeof files.file !== 'undefined'){
+			if(files.file.name != ''){
+				route = "./tmp/" + files.file.name;
+				/* Possible error on Windows systems:
+				tried to rename to an already existing file */
+				fs.rename(files.file.path, route, function(error) {
+					if (error) {
+						fs.unlink(route);
+						fs.rename(files.file.path, route);
 					}
-					response.write('</body></html>');
-					response.end();
 				});
 			}
-	});
+		}
+
+		//Check data and insert into our database
+		console.log("Username: " + fields['username']);
+		if(fields['date'] == '' | fields['text'] == '' ){
+			response.writeHead(200, {'content-type': 'text/html'});
+			response.write('<!DOCTYPE html><html><body>');
+			response.write('Date and Text are obligatoty.');
+			response.write('</body></html>');
+			response.end();
+		}else{
+			var note = { date: fields['date'], text: fields['text'], route_file: route, username: fields['username'] };
+			mongoConnector.insertNote(note, function(err, rows){
+				console.log(rows);
+				response.writeHead(200, {'content-type': 'text/html'});
+				response.write('<!DOCTYPE html><html><body>');
+				if(err){
+					response.write('There was a problem with our database connection.');
+				} else {
+					response.write('Note saved.');
+				}
+				response.write('</body></html>');
+				response.end();
+			});
+		}
+});
 }
 
 /*
@@ -172,10 +328,10 @@ function deletememo(response){
 	var form = '<form action="/deleted" enctype="multipart/form-data" '+
 		'method="post">'+
 		'Write an id: <input name="id" type="number"></input>'+
-		'<input type="submit"></input>'+
+		'<input type="submit" value="Delete" ></input>'+
 		'</form>';
 
-	notesDAO.listNotes(function(err, rows){
+	mongoConnector.listNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><head><title>deletememo</title></head><html><body>');
@@ -183,11 +339,11 @@ function deletememo(response){
 		response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
 		for (var i = 0; i < rows.length; i++) {
 			response.write('<tr>');
-			response.write('<td>' + rows[i].id + '</td>');
+			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[i].id  +'">' + rows[i].route_file + '</a>' + '</td>');
-			response.write('<td>' + '<a href="./showmemo?='+ rows[i].id  +'">Details</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table><br/>');
@@ -212,7 +368,7 @@ function deleted(response, request){
 		})
     .on('end', function() {
 			if(typeof id !== 'undefined'){
-				notesDAO.deleteNote(id, function(err, rows){
+				mongoConnector.deleteNote(id, function(err, rows){
 					response.writeHead(200, {'content-type': 'text/html'});
 					response.write('<!DOCTYPE html><html><body>');
 					if(err){
@@ -234,9 +390,11 @@ function deleted(response, request){
 }
 
 exports.setmemo = setmemo;
-exports.savetask = savetask;
+exports.savememo = savememo;
 exports.showallmemo = showallmemo;
 exports.showmemo = showmemo;
 exports.deletememo = deletememo;
 exports.deleted = deleted;
 exports.downloadfile = downloadfile;
+exports.login = login;
+exports.welcome = welcome;
