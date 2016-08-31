@@ -189,9 +189,9 @@ function showMemo(response, request){
 			response.write('</table>');
 		}else{
 			response.write('This note does not exist. ');
-			response.write('</body></html>');
-			response.end();
 		}
+		response.write('</body></html>');
+		response.end();
 	});
 }
 
@@ -322,29 +322,31 @@ Show a list of notes and a form to delete one of them
 function deleteMemo(response){
 	console.log("Request handler 'deleteMemo' was called.");
 
-	var form = '<form action="/deleted" enctype="multipart/form-data" '+
-		'method="post">'+
-		'Write an id: <input name="id" type="number"></input>'+
-		'<input type="submit" value="Delete" ></input>'+
-		'</form>';
-
-	mongoConnector.listNotes(function(err, rows){
+	mongoConnector.listAllNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><head><title>deleteMemo</title></head><html><body>');
 		response.write('<table>');
-		response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
+		response.write('<tr><th>Owner</th><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
 		for (var i = 0; i < rows.length; i++) {
+
+			var formButtonDelete = '<div><form action="/deleted" enctype="multipart/form-data" '+
+				'method="post">'+
+				'<input type="hidden" name="id" value="'+ rows[i]._id +'">'+
+				'<input type="submit" value="Delete"></input>'+
+				'</form></div>';
+
 			response.write('<tr>');
+			response.write('<td>' + rows[i].username + '</td>');
 			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
 			response.write('<td>' + '<a href="./downloadFile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
 			response.write('<td>' + '<a href="./showMemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
+			response.write('<td>' + formButtonDelete + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table><br/>');
-		response.write(form);
 		response.write('</body></html>');
 		response.end();
 	});
