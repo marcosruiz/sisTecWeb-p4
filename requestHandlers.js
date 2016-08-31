@@ -4,10 +4,11 @@ formidable = require("formidable"),
 mongoConnector = require("./mongoConnector"),
 url = require('url');
 
-
-function login(response, request){
+/*
+It shows a form to insert a new note and a list with the user notes
+*/
+function welcome(response, request){
 	console.log("Request handler 'login' was called.");
-
 	var form = new formidable.IncomingForm();
 	form.parse(request, function(error, fields) {
 		response.writeHead(200, {'content-type': 'text/html'});
@@ -19,18 +20,18 @@ function login(response, request){
 			var user = { username: fields['username'], password: fields['password']};
 			mongoConnector.findUser(fields['username'], function(err, row){
 				if(err) throw err;
+				var form ='Welcome Mr. '+ fields['username'] + '<br/>' +
+					'<form action="/saveMemo" enctype="multipart/form-data" '+
+					'method="post">'+
+					'Date*: <input type="date" name="date"/><br/>' +
+					'Text*: <input type="text" name="text"/><br/>' +
+					'File: <input type="file" name="file" multiple="multiple"/><br/>'+
+					'<input type="hidden" name="username" value="'+ fields['username'] +'"/>' +
+					'<input type="hidden" name="password" value="'+ fields['password'] +'"/>' +
+					'<input type="submit" value="Save note" /></form><br/>';
 				if(row == null){
 					//User doesnt exists, so we create a new user
 					mongoConnector.insertUser(user, function(err, row){
-						var form ='Welcome Mr. '+ fields['username'] + '<br/>' +
-							'<form action="/savememo" enctype="multipart/form-data" '+
-							'method="post">'+
-							'Date*: <input type="date" name="date"/><br/>' +
-							'Text*: <input type="text" name="text"/><br/>' +
-							'File: <input type="file" name="file" multiple="multiple"/><br/>'+
-							'<input type="hidden" name="username" value="'+ fields['username'] +'"/>' +
-							'<input type="hidden" name="password" value="'+ fields['password'] +'"/>' +
-							'<input type="submit" value="Save note" /></form><br/>';
 						response.write(form);
 						responseTableOfNotes(response, fields['username']);
 					});
@@ -39,15 +40,6 @@ function login(response, request){
 					//Check password
 					if(fields['password'] == row['password']){
 						//Password is correct
-						var form ='Welcome Mr. '+ fields['username'] + '<br/>' +
-							'<form action="/savememo" enctype="multipart/form-data" '+
-							'method="post">'+
-							'Date*: <input type="date" name="date"/><br/>' +
-							'Text*: <input type="text" name="text"/><br/>' +
-							'File: <input type="file" name="file" multiple="multiple"/><br/>'+
-							'<input type="hidden" name="username" value="'+ fields['username'] +'"/>' +
-							'<input type="hidden" name="password" value="'+ fields['password'] +'"/>' +
-							'<input type="submit" value="Save note" /></form><br/>';
 						response.write(form);
 						responseTableOfNotes(response, fields['username']);
 					} else{
@@ -59,11 +51,13 @@ function login(response, request){
 				}
 			});
 		}
-
 });
 
 }
 
+/*
+It writes a table of notes
+*/
 function responseTableOfNotes(response, username){
 	mongoConnector.listNotes(username, function(err, rows){
 		if(err) throw err;
@@ -80,18 +74,23 @@ function responseTableOfNotes(response, username){
 			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
-			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadFile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showMemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
 			response.write('<td>' + form + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table>');
+
+		//TODO this should not be here, but...
 		response.write('</body></html>');
 		response.end();
 	});
 }
 
-function welcome(response){
+/*
+It shows a form to do login
+*/
+function logged(response){
 	console.log("Request handler 'welcome' was called.");
 	var body = '<html>'+
 		'<head>'+
@@ -99,7 +98,7 @@ function welcome(response){
 		'content="text/html; charset=UTF-8" />'+
 		'</head>'+
 		'<body>'+
-		'<form action="/login" enctype="multipart/form-data" '+
+		'<form action="/welcome" enctype="multipart/form-data" '+
 		'method="post">'+
 		'Username: <input type="text" name="username"/><br/>' +
 		'Password: <input type="password" name="password"/><br/>' +
@@ -112,12 +111,13 @@ function welcome(response){
 	response.write(body);
 	response.end();
 }
+
 /*
 It shows a form with an obligatotry date, an obligatory text, an optional
-file and a submit button witch calls to /savememo
+file and a submit button witch calls to /saveMemo
 */
-function setmemo(response){
-	console.log("Request handler 'setmemo' was called.");
+function setMemo(response){
+	console.log("Request handler 'setMemo' was called.");
 
 	var body = '<html>'+
 		'<head>'+
@@ -125,7 +125,7 @@ function setmemo(response){
 		'content="text/html; charset=UTF-8" />'+
 		'</head>'+
 		'<body>'+
-		'<form action="/savememo" enctype="multipart/form-data" '+
+		'<form action="/saveMemo" enctype="multipart/form-data" '+
 		'method="post">'+
 		'Date*: <input type="date" name="date"/><br/>' +
 		'Text*: <input type="text" name="text"/><br/>' +
@@ -143,20 +143,21 @@ function setmemo(response){
 /*
 Show a list of all notes of our database
 */
-function showallmemo(response){
-	mongoConnector.listNotes(function(err, rows){
+function showAllMemo(response){
+	mongoConnector.listAllNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><html><body>');
 		response.write('<table>');
-		response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
+		response.write('<tr><th>Owner</th><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
 		for (var i = 0; i < rows.length; i++) {
 			response.write('<tr>');
+			response.write('<td>' + rows[i].username + '</td>');
 			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
-			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadFile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showMemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table>');
@@ -168,37 +169,37 @@ function showallmemo(response){
 /*
 Show all info about a specific notes
 */
-function showmemo(response, request){
+function showMemo(response, request){
 	var url_parts = url.parse(request.url, true);
 	var id = url_parts.query[""];
 	mongoConnector.findNote(id, function(err, rows){
 		if(err) throw err;
-		console.log(rows);
 		response.writeHead(200, {'content-type': 'text/html'});
 		response.write('<!DOCTYPE html><html><body>');
 		if(rows.length !== 0){
 			response.write('<table>');
-			response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>Download</th></tr>');
+			response.write('<tr><th>Owner</th><th>Id</th><th>Date</th><th>Text</th><th>Download</th></tr>');
 			response.write('<tr>');
+			response.write('<td>' + rows[0].username + '</td>');
 			response.write('<td>' + rows[0]._id + '</td>');
 			response.write('<td>' + rows[0].date + '</td>');
 			response.write('<td>' + rows[0].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[0]._id  +'">' + rows[0].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadFile?='+ rows[0]._id  +'">' + rows[0].route_file + '</a>' + '</td>');
 			response.write('</tr>');
 			response.write('</table>');
 		}else{
 			response.write('This note does not exist. ');
+			response.write('</body></html>');
+			response.end();
 		}
-		response.write('</body></html>');
-		response.end();
 	});
 }
 
 /*
 Download undefined file
 */
-function downloadfile(response, request){
-	console.log("Request handler 'downloadfile' was called.");
+function downloadFile(response, request){
+	console.log("Request handler 'downloadFile' was called.");
 	var url_parts = url.parse(request.url, true);
 	var id = url_parts.query[""];
 	if(typeof id !== 'undefined'){
@@ -218,16 +219,14 @@ function downloadfile(response, request){
 		response.write("404 Not found");
 		response.end();
 	}
-
-
 }
 
 /*
 Check user credentials
 */
-function checkuser(response, request, err, callback){
+function checkUser(response, request, err, callback){
 	//Check data and insert into our database
-	/*var form = new formidable.IncomingForm();
+	var form = new formidable.IncomingForm();
 	form.parse(request, function(error, fields, files){
 		if(fields['username'] == '' | fields['password'] == '' ){
 			var msg = "Username and password are obligatoty fields";
@@ -254,7 +253,7 @@ function checkuser(response, request, err, callback){
 				}
 			});
 		}
-	});*/
+	});
 	callback(response,request);
 }
 
@@ -267,10 +266,9 @@ function err(msg){
 /*
 Save a file in ./tmp/ and save a note in our database
 */
-function savememo(response, request){
-		console.log("Request handler 'savememo' was called.");
-
-		checkuser(response, request, err, checkNoteAndSave);
+function saveMemo(response, request){
+		console.log("Request handler 'saveMemo' was called.");
+		checkUser(response, request, err, checkNoteAndSave);
 }
 
 function checkNoteAndSave(response, request){
@@ -295,7 +293,7 @@ function checkNoteAndSave(response, request){
 
 		//Check data and insert into our database
 		console.log("Username: " + fields['username']);
-		if(fields['date'] == '' | fields['text'] == '' ){
+		if(typeof fields['date'] == 'undefined' | typeof fields['text'] == 'undefined' | fields['date'] == '' | fields['text'] == ''){
 			response.writeHead(200, {'content-type': 'text/html'});
 			response.write('<!DOCTYPE html><html><body>');
 			response.write('Date and Text are obligatoty.');
@@ -304,7 +302,6 @@ function checkNoteAndSave(response, request){
 		}else{
 			var note = { date: fields['date'], text: fields['text'], route_file: route, username: fields['username'] };
 			mongoConnector.insertNote(note, function(err, rows){
-				console.log(rows);
 				response.writeHead(200, {'content-type': 'text/html'});
 				response.write('<!DOCTYPE html><html><body>');
 				if(err){
@@ -322,8 +319,8 @@ function checkNoteAndSave(response, request){
 /*
 Show a list of notes and a form to delete one of them
 */
-function deletememo(response){
-	console.log("Request handler 'deletememo' was called.");
+function deleteMemo(response){
+	console.log("Request handler 'deleteMemo' was called.");
 
 	var form = '<form action="/deleted" enctype="multipart/form-data" '+
 		'method="post">'+
@@ -334,7 +331,7 @@ function deletememo(response){
 	mongoConnector.listNotes(function(err, rows){
 		if(err) throw err;
 		response.writeHead(200, {'content-type': 'text/html'});
-		response.write('<!DOCTYPE html><head><title>deletememo</title></head><html><body>');
+		response.write('<!DOCTYPE html><head><title>deleteMemo</title></head><html><body>');
 		response.write('<table>');
 		response.write('<tr><th>Id</th><th>Date</th><th>Text</th><th>File</th><th>Info</th></tr>');
 		for (var i = 0; i < rows.length; i++) {
@@ -342,8 +339,8 @@ function deletememo(response){
 			response.write('<td>' + rows[i]._id + '</td>');
 			response.write('<td>' + rows[i].date + '</td>');
 			response.write('<td>' + rows[i].text + '</td>');
-			response.write('<td>' + '<a href="./downloadfile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
-			response.write('<td>' + '<a href="./showmemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
+			response.write('<td>' + '<a href="./downloadFile?='+ rows[i]._id  +'">' + rows[i].route_file + '</a>' + '</td>');
+			response.write('<td>' + '<a href="./showMemo?='+ rows[i]._id  +'">Details</a>' + '</td>');
 			response.write('</tr>');
 		};
 		response.write('</table><br/>');
@@ -389,12 +386,12 @@ function deleted(response, request){
 
 }
 
-exports.setmemo = setmemo;
-exports.savememo = savememo;
-exports.showallmemo = showallmemo;
-exports.showmemo = showmemo;
-exports.deletememo = deletememo;
+exports.setMemo = setMemo;
+exports.saveMemo = saveMemo;
+exports.showAllMemo = showAllMemo;
+exports.showMemo = showMemo;
+exports.deleteMemo = deleteMemo;
 exports.deleted = deleted;
-exports.downloadfile = downloadfile;
-exports.login = login;
+exports.downloadFile = downloadFile;
+exports.logged = logged;
 exports.welcome = welcome;

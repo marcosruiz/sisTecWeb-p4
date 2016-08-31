@@ -58,6 +58,10 @@ function listNotes(username, callback){
   collectionNotes.find({username: username}).toArray(callback);
 }
 
+function listAllNotes(callback){
+  collectionNotes.find().toArray(callback);
+}
+
 function findUser(username, callback){
   collectionUsers.findOne({username: username}, callback);
 }
@@ -72,7 +76,7 @@ exports.insertNote = insertNote;
 exports.deleteNote = deleteNote;
 exports.findNote = findNote;
 exports.listNotes = listNotes;
-
+exports.listAllNotes = listAllNotes;
 exports.findUser = findUser;
 exports.insertUser = insertUser;
 exports.listUsers = listUsers;
