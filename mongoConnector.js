@@ -28,7 +28,7 @@ function insertUser(user, callback){
 }
 
 function insertNote(note, callback){
-  console.log("function 'insertNote' was called. ")
+  console.log("function 'insertNote' was called. ");
   autoIncrement.getNextSequence(connection, connectionNameNotes, function (err, autoIndex) {
     //var collection = db.collection(collectionName);
     collectionNotes.insert({

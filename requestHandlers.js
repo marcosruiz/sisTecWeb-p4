@@ -91,7 +91,7 @@ function responseTableOfNotes(response, username){
 It shows a form to do login
 */
 function logged(response){
-	console.log("Request handler 'welcome' was called.");
+	console.log("Request handler 'logged' was called.");
 	var body = '<html>'+
 		'<head>'+
 		'<meta http-equiv="Content-Type" '+
